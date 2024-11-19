@@ -33,7 +33,7 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Run Composer to install dependencies with memory limit to avoid OOM issues
-RUN composer update && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+# RUN composer update && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
 # Set proper permissions again for storage and cache after composer install
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
