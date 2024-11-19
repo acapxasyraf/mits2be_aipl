@@ -33,7 +33,7 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Run Composer to install dependencies with memory limit to avoid OOM issues
-# RUN composer update && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+RUN composer update && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
 # Set proper permissions again for storage and cache after composer install
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
@@ -47,7 +47,7 @@ RUN mkdir -p /home/devuser/.composer && \
 USER www-data
 
 # Run artisan commands to clear cache and prepare the app for use
-# RUN php artisan config:clear && php artisan view:clear && php artisan route:clear && php artisan cache:clear
+RUN php artisan config:clear && php artisan view:clear && php artisan route:clear && php artisan cache:clear
 
 # Expose port 80 for Apache
 #EXPOSE 80
