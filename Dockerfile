@@ -47,7 +47,7 @@ RUN mkdir -p /home/devuser/.composer && \
 USER www-data
 
 # Run artisan commands to clear cache and prepare the app for use
-RUN php artisan config:clear && php artisan view:clear && php artisan route:clear && php artisan cache:clear
+# RUN php artisan config:clear && php artisan view:clear && php artisan route:clear && php artisan cache:clear
 
 # Expose port 80 for Apache
 #EXPOSE 80
