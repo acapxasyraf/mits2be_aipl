@@ -1,5 +1,5 @@
-# Use official PHP 8.1 image with Apache
-FROM php:8.1-apache
+# Use official PHP 8.2 image with Apache
+FROM php:8.2-apache
 
 # Set working directory
 WORKDIR /var/www/html
@@ -17,42 +17,29 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd pdo_mysql mbstring zip exif pcntl
+    && docker-php-ext-install -j$(nproc) gd pdo_mysql mbstring zip exif pcntl \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Composer globally
-# RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+RUN git config --global --add safe.directory /var/www/html
 
 # Copy existing application files
 COPY . .
 
-# Copy the .env file (assuming you have a .env.development in your project directory)
-COPY .env.development /var/www/html/.env
+# Ensure proper permissions for Laravel writable directories
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && \
+    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Set proper permissions for storage and cache
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+# Install Laravel dependencies
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
-# Run Composer to install dependencies with memory limit to avoid OOM issues
-# RUN composer update && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+# Clear Laravel caches
+RUN php artisan config:clear && php artisan view:clear && php artisan route:clear && php artisan cache:clear
 
-# Set proper permissions again for storage and cache after composer install
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+# Expose the port used by Google Cloud Run
+EXPOSE 8080
 
-# Create a non-root user and set permissions
-RUN useradd -G www-data,root -u 1000 -d /home/devuser devuser
-RUN mkdir -p /home/devuser/.composer && \
-    chown -R devuser:devuser /home/devuser
-
-# Switch back to the 'www-data' user to run artisan commands and avoid permission issues
-USER www-data
-
-# Run artisan commands to clear cache and prepare the app for use
-# RUN php artisan config:clear && php artisan view:clear && php artisan route:clear && php artisan cache:clear
-
-# Expose port 80 for Apache
-#EXPOSE 80
-
-# Start Apache in the foreground with the Laravel application
-#CMD ["apache2-foreground"]
-
-CMD php artisan serve --host=0.0.0.0 --port 80
+# Start Apache in the foreground
+CMD ["apache2-foreground"]
