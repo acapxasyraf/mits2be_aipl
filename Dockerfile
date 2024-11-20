@@ -17,25 +17,42 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install -j$(nproc) gd pdo_mysql mbstring zip exif pcntl \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+    && docker-php-ext-install -j$(nproc) gd pdo_mysql mbstring zip exif pcntl
 
 # Install Composer globally
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+# RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Copy application files
+# Copy existing application files
 COPY . .
 
+# Copy the .env file (assuming you have a .env.development in your project directory)
+COPY .env.development /var/www/html/.env
+
 # Set proper permissions for storage and cache
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache && \
-    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Expose port 80
-EXPOSE 80
+# Run Composer to install dependencies with memory limit to avoid OOM issues
+# RUN composer update && composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
-# Health check for Google Cloud
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost || exit 1
+# Set proper permissions again for storage and cache after composer install
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Start Apache
-CMD ["apache2-foreground"]
+# Create a non-root user and set permissions
+RUN useradd -G www-data,root -u 1000 -d /home/devuser devuser
+RUN mkdir -p /home/devuser/.composer && \
+    chown -R devuser:devuser /home/devuser
+
+# Switch back to the 'www-data' user to run artisan commands and avoid permission issues
+USER www-data
+
+# Run artisan commands to clear cache and prepare the app for use
+# RUN php artisan config:clear && php artisan view:clear && php artisan route:clear && php artisan cache:clear
+
+# Expose port 80 for Apache
+#EXPOSE 80
+
+# Start Apache in the foreground with the Laravel application
+#CMD ["apache2-foreground"]
+
+CMD php artisan serve --host=0.0.0.0 --port 80
